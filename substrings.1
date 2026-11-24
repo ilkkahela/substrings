@@ -1,0 +1,306 @@
+.Dd November 20, 2026
+.Dt SUBSTRINGS 1
+.Os
+.Sh NAME
+.Nm substrings
+.Nd suffix array text analysis tool
+.Sh SYNOPSIS
+.Nm
+.Op Ar options
+.Op Fl -
+.Op Ar input
+.Sh DESCRIPTION
+.Nm
+builds the suffix array of a text and prints its most frequent repeated
+substrings, sorted by frequency and then lexicographically, one per line as
+.Dq Ar substring count .
+It can also count the occurrences of given patterns, find palindromes and
+shortest unique substrings, compute the
+LZ77 factorization and the Burrows\(enWheeler transform, show the internal
+suffix array tables, and write the suffix tree as a Graphviz file.
+.Pp
+The text is the
+.Ar input
+argument, or the contents of the file given with
+.Fl i ,
+or standard input.
+An
+.Ar input
+of
+.Ql -
+means standard input.
+Text that starts with
+.Ql -
+must follow
+.Fl - .
+Inputs are treated as bytes; results never split a UTF\-8 character, and
+lengths and positions of palindromes and unique substrings count characters.
+.Pp
+When standard error is a terminal and building the suffix array takes more
+than a moment, a progress bar is shown there.
+.Sh OPTIONS
+Options with a value take it after
+.Ql =
+or as the next argument, except
+.Fl -color ,
+which needs
+.Ql = .
+.Bl -tag -width Ds
+.It Fl i Ar file , Fl -input Ns = Ns Ar file
+Read the input from
+.Ar file ,
+or from standard input if it is
+.Ql - .
+.It Fl o Ar file , Fl -output Ns = Ns Ar file
+Write the output to
+.Ar file
+instead of standard output, unless it is
+.Ql - .
+.It Fl n Ar N , Fl -top Ns = Ns Ar N
+Print at most
+.Ar N
+repeated substrings.
+The default is 100000.
+.It Fl -minlength Ns = Ns Ar N
+Print only repeated substrings of at least
+.Ar N
+bytes, or with
+.Fl -words ,
+phrases of at least
+.Ar N
+words.
+The default is 2 bytes, or 1 word.
+.It Fl -words
+List only whole words and phrases: repeats that start and end at a word
+boundary, counted only where they do, so
+.Ql the
+inside
+.Ql other
+does not count.
+A word is a run of letters and digits: ASCII letters and digits, and every
+character from U+00C0 on except U+2000\(enU+2FFF (punctuation, quotes,
+dashes and symbols).
+Anything else separates words, and phrases keep it:
+.Ql don't
+is the two words
+.Ql don
+and
+.Ql t ,
+and also a phrase.
+With
+.Fl -find ,
+count only the occurrences that are whole words or phrases.
+.It Fl -nocount
+Omit the occurrence counts.
+.It Fl -delimiter Ns = Ns Ar str
+Separate a substring from its count with
+.Ar str
+instead of a space.
+.It Fl -entry-delimiter Ns = Ns Ar str
+Separate entries with
+.Ar str
+instead of a newline.
+Both delimiters accept the escapes
+.Ql \en ,
+.Ql \er ,
+.Ql \et ,
+.Ql \e\e
+and
+.Ql \e0 .
+.It Fl -find Ns = Ns Ar pattern
+Instead of the repeats, print
+.Ar pattern
+and its number of occurrences, in the same format.
+Repeat the option to count several patterns.
+.Ar pattern
+accepts the same escapes as the delimiters, so
+.Fl -find Ns = Ns Ql \er\en
+counts line breaks.
+.It Fl -escape Ns Op = Ns Ar when
+Escape line breaks, tabs, other control characters, invisible characters and
+invalid UTF\-8 in the repeats, patterns, palindromes and unique substrings
+as
+.Ql \en ,
+.Ql \et ,
+.Ql \exNN ,
+.Ql \euXXXX ,
+and backslashes as
+.Ql \e\e ,
+so that every result stays on one line:
+.Cm auto
+(the default) when writing to a terminal,
+.Cm always
+(also
+.Fl -escape
+alone) or
+.Cm never .
+.It Fl -json
+Print the repeats, pattern counts, palindromes and shortest unique
+substrings as JSON Lines;
+see
+.Sx JSON OUTPUT .
+.Fl -nocount
+and the delimiters are ignored.
+Not available with
+.Fl -lz77 ,
+.Fl -bwt
+or
+.Fl -view-internal-tables .
+.It Fl -palindrome
+Before the repeats, print the distinct maximal palindromes, longest first
+(up to 1000).
+.It Fl -shortest-unique
+Before the repeats, print every shortest substring that occurs exactly once
+(up to 1000).
+.It Fl -lz77
+Instead of the repeats, print the greedy LZ77 factorization as
+tab-separated values: one
+.Ql pos len src text
+line per phrase
+.Ql ( src
+is
+.Ql -
+for a literal byte), then a
+.Ql #
+summary line.
+The text column is escaped reversibly, so the input can be rebuilt from the
+output.
+.It Fl -bwt
+Instead of the repeats, print the Burrows\(enWheeler matrix of the input
+followed by
+.Ql $ ,
+the transform, the row of the original text and the number of runs.
+The matrix is drawn only for inputs up to 1000 characters.
+.It Fl -view-internal-tables
+Instead of the repeats, print the SA, Rank, PLCP and LCP arrays next to the
+sorted suffixes.
+Control characters, invisible characters and invalid UTF\-8 are shown as
+visible symbols or escapes.
+.It Fl -graph
+Write the suffix tree, with suffix links, to
+.Pa suffix_tree.dot .
+.It Fl -dotfile Ns = Ns Ar file
+Write the suffix tree to
+.Ar file .
+Edge labels longer than 16 bytes are shortened.
+.It Fl -force-graph
+Allow
+.Fl -graph
+and
+.Fl -dotfile
+for inputs over 10 KB.
+.It Fl -color Ns Op = Ns Ar when
+Color the tables of
+.Fl -bwt
+and
+.Fl -view-internal-tables :
+.Cm auto
+(the default) when writing to a terminal,
+.Cm always
+(also
+.Fl -color
+alone) or
+.Cm never .
+.It Fl -no-pager
+Write to the terminal directly instead of through a pager.
+.It Fl -completions Ns = Ns Ar shell
+Print a completion script for
+.Cm bash ,
+.Cm zsh
+or
+.Cm fish
+and exit.
+.It Fl -version
+Print the version and exit.
+.It Fl h , Fl -help
+Print a usage summary and exit.
+.El
+.Sh JSON OUTPUT
+With
+.Fl -json ,
+each result is one JSON object on its own line:
+.Bd -literal -offset indent
+{"type":"repeat","text":"an","count":2}
+{"type":"match","text":"an","count":2,"pos":[1,3]}
+{"type":"palindrome","text":"anana","pos":1,"len":5}
+{"type":"unique","text":"b","pos":0,"len":1}
+{"type":"omitted","of":"palindrome","count":12}
+.Ed
+.Pp
+.Ql pos
+and
+.Ql len
+count characters; a
+.Ql match
+lists the positions of all occurrences.
+Palindromes and unique substrings over 80 characters are abbreviated with
+.Ql ...
+in the middle, as in the plain output; an
+.Ql omitted
+object counts results past the first 1000.
+Invalid UTF\-8 is replaced with U+FFFD.
+.Sh ENVIRONMENT
+.Bl -tag -width Ds
+.It Ev COLUMNS
+The width that tables are fitted to, instead of the terminal's width
+(80 when not writing to a terminal).
+.It Ev LESS
+Options for
+.Xr less 1 .
+If unset,
+.Nm
+runs the pager with
+.Ev LESS Ns = Ns Ql FRX :
+output that fits on one screen is printed directly, colors pass through, and
+the screen is not cleared.
+.It Ev SUBSTRINGS_PAGER , Ev PAGER
+The pager for output to a terminal, run with
+.Pa /bin/sh ;
+.Ev SUBSTRINGS_PAGER
+takes precedence.
+The default is
+.Xr less 1 .
+An empty value or
+.Ql cat
+turns the pager off.
+.It Ev NO_COLOR
+If set to a non-empty value,
+.Fl -color Ns = Ns Cm auto
+does not color.
+So does
+.Ev TERM Ns = Ns Ql dumb .
+.El
+.Sh EXIT STATUS
+.Ex -std
+Quitting the pager before all output is shown is not an error.
+.Sh EXAMPLES
+The ten most frequent repeats of at least 20 bytes:
+.Pp
+.Dl $ substrings -i pg100.txt --minlength=20 --top=10
+.Pp
+The most frequent phrases of at least four words:
+.Pp
+.Dl $ substrings -i pg100.txt --words --minlength=4 --top=20
+.Pp
+How often two words occur, and where one of them does:
+.Pp
+.Dl $ substrings -i pg100.txt --find=Hamlet --find=Ophelia
+.Dl $ substrings -i pg100.txt --find=Ophelia --json | jq -c .pos
+.Pp
+Longest palindromes, as JSON:
+.Pp
+.Dl $ substrings --palindrome --json --top=1 -i text.txt | jq -r 'select(.type == \(dqpalindrome\(dq) | .text'
+.Pp
+The suffix tree of a short word, as a PDF:
+.Pp
+.Dl $ substrings --graph banana && dot -Tpdf suffix_tree.dot -o tree.pdf
+.Pp
+Load completions in the current bash session:
+.Pp
+.Dl $ source <(substrings --completions=bash)
+.Sh SEE ALSO
+.Xr dot 1 ,
+.Xr less 1
+.Pp
+.Lk https://github.com/IlyaGrebnov/libsais libsais ,
+which builds the suffix, PLCP and LCP arrays.
