@@ -16,7 +16,7 @@ ss 2
 ssi 2
 ```
 
-The program builds a suffix array of its input. 
+The program builds a suffix array of its input.
 
 <p align="center">
   <img src="docs/animation.webp" alt="The suffix tree of mississippi, growing one letter at a time" width="688">
@@ -24,7 +24,6 @@ The program builds a suffix array of its input.
   <em>The suffix tree of <code>mississippi</code>, one prefix at a time
   (<code>substrings --graph</code>; dashed red arrows are suffix links).</em>
 </p>
-
 
 By default it lists the repeated substrings, most frequent first. Bioinformatics does the same kind of
 repeat finding to locate repeated regions in DNA. The same index answers
@@ -54,10 +53,8 @@ other questions as well:
   ([example](#find-palindromes)).
 - **Learning how suffix structures work.** `--view-internal-tables`, `--bwt`
   and `--graph` show the suffix array, LCP array, Burrows–Wheeler matrix and
-  suffix tree of small inputs, such as the animation below
+  suffix tree of small inputs, such as the animation above
   ([example](#look-inside-the-suffix-array)).
-
-
 
 It is written in C++23, works on raw bytes but never splits a UTF-8
 character in its results, and is reasonably fast: the complete works of Shakespeare
@@ -373,7 +370,7 @@ terminal (`--color=always|never` to override).
 ```bash
 substrings --inline --graph banana                  # writes suffix_tree.dot
 substrings --inline --dotfile=tree.dot mississippi  # or any file name
-dot -Tsvg tree.dot -o tree.svg             # render with Graphviz
+dot -Tsvg tree.dot -o tree.svg                      # render with Graphviz
 ```
 
 Edge labels longer than 16 bytes are shortened with `...`, and dashed red
