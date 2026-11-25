@@ -1,4 +1,4 @@
-.Dd November 20, 2026
+.Dd November 25, 2026
 .Dt SUBSTRINGS 1
 .Os
 .Sh NAME
@@ -8,7 +8,12 @@
 .Nm
 .Op Ar options
 .Op Fl -
-.Op Ar input
+.Op Ar file
+.Nm
+.Fl -inline
+.Op Ar options
+.Op Fl -
+.Ar text
 .Sh DESCRIPTION
 .Nm
 builds the suffix array of a text and prints its most frequent repeated
@@ -19,17 +24,18 @@ shortest unique substrings, compute the
 LZ77 factorization and the Burrows\(enWheeler transform, show the internal
 suffix array tables, and write the suffix tree as a Graphviz file.
 .Pp
-The text is the
-.Ar input
-argument, or the contents of the file given with
+The input is the contents of
+.Ar file ,
+given as the argument or with
 .Fl i ,
-or standard input.
-An
-.Ar input
-of
-.Ql -
-means standard input.
-Text that starts with
+or standard input if there is none or it is
+.Ql - .
+With
+.Fl -inline ,
+the argument is the
+.Ar text
+itself.
+An argument that starts with
 .Ql -
 must follow
 .Fl - .
@@ -51,6 +57,8 @@ Read the input from
 .Ar file ,
 or from standard input if it is
 .Ql - .
+.It Fl -inline
+Take the argument as the input text instead of a file name.
 .It Fl o Ar file , Fl -output Ns = Ns Ar file
 Write the output to
 .Ar file
@@ -293,7 +301,7 @@ Longest palindromes, as JSON:
 .Pp
 The suffix tree of a short word, as a PDF:
 .Pp
-.Dl $ substrings --graph banana && dot -Tpdf suffix_tree.dot -o tree.pdf
+.Dl $ substrings --inline --graph banana && dot -Tpdf suffix_tree.dot -o tree.pdf
 .Pp
 Load completions in the current bash session:
 .Pp

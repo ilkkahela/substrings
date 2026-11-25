@@ -4,7 +4,7 @@
 Substrings prints the most commonly occurring substrings within the text.
 
 ```
-./build/substrings mississippi
+./build/substrings --inline mississippi
 ```
 
 ```
@@ -16,11 +16,7 @@ ss 2
 ssi 2
 ```
 
-**Tool for finding repeating texts.** `substrings` builds the suffix array of its
-input and answers questions about it: the most frequent repeated substrings,
-words and phrases, how often a pattern occurs and where, palindromes, the
-shortest unique substrings, the LZ77 factorization, the Burrows–Wheeler
-transform, and the suffix tree itself (as suffix array since those are faster than naive tree).
+The program builds a suffix array of its input. 
 
 <p align="center">
   <img src="docs/animation.webp" alt="The suffix tree of mississippi, growing one letter at a time" width="688">
@@ -28,6 +24,40 @@ transform, and the suffix tree itself (as suffix array since those are faster th
   <em>The suffix tree of <code>mississippi</code>, one prefix at a time
   (<code>substrings --graph</code>; dashed red arrows are suffix links).</em>
 </p>
+
+
+By default it lists the repeated substrings, most frequent first. Bioinformatics does the same kind of
+repeat finding to locate repeated regions in DNA. The same index answers
+other questions as well:
+
+- **Common words and phrases.** `--words` counts only whole words, so
+  `--words --minlength 3` lists the most frequent three-word phrases
+  ([example](#which-words-and-phrases-are-most-common)).
+- **Counting and locating a pattern.** `--find` counts any string, phrase or
+  escaped sequence instantly, and `--json` adds the position of every
+  occurrence ([example](#how-often-does-a-word-or-phrase-occur)).
+- **Duplicated text.** A large `--minlength` finds long passages that occur
+  more than once: copy-pasted paragraphs, boilerplate, repeated log lines or
+  duplicated code ([example](#what-are-the-longest-passages-that-repeat)).
+  `scripts/compare.py` finds the passages two different texts share, such as
+  quotations ([example](#find-the-passages-two-texts-share)).
+- **Any command's output.** Input can come from a pipe, so `ls`, logs or
+  CSV columns can be analyzed directly
+  ([example](#analyze-the-output-of-another-command)).
+- **Compressibility.** `--lz77` and `--bwt` show how repetitive a text is:
+  the fewer LZ77 phrases or BWT runs, the better it compresses
+  ([example](#how-compressible-is-a-text)).
+- **Unique fingerprints.** `--shortest-unique` lists the shortest substrings
+  that occur exactly once, which are the shortest keys that each identify
+  one position in the text ([example](#find-the-shortest-unique-substrings)).
+- **Palindromes.** `--palindrome` lists the longest palindromes
+  ([example](#find-palindromes)).
+- **Learning how suffix structures work.** `--view-internal-tables`, `--bwt`
+  and `--graph` show the suffix array, LCP array, Burrows–Wheeler matrix and
+  suffix tree of small inputs, such as the animation below
+  ([example](#look-inside-the-suffix-array)).
+
+
 
 It is written in C++23, works on raw bytes but never splits a UTF-8
 character in its results, and is reasonably fast: the complete works of Shakespeare
@@ -45,9 +75,10 @@ parallelized with OpenMP when available.
 ```bash
 cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
+./build/substrings --inline mississippi
+```
 
-
-Every substring of at least two bytes that occurs more than once, most
+This lists every substring of at least two bytes that occurs more than once, most
 frequent first, ties in alphabetical order. See [Build](#build) for compiler
 requirements, and [Install](#install) for the man page and shell completions.
 
@@ -57,13 +88,14 @@ The recipes below use short words and
 [`pg100.txt`](https://www.gutenberg.org/ebooks/100), Project Gutenberg's
 *Complete Works of William Shakespeare*. All outputs are real.
 
-Input comes from the `INPUT` argument, `-i FILE`, or stdin; results go to the
-terminal (through a pager, like git) or to `-o FILE`.
+Input comes from a file (`substrings FILE` or `-i FILE`), from stdin, or with
+`--inline`, from the argument itself (`substrings --inline banana`); results
+go to the terminal (through a pager, like git) or to `-o FILE`.
 
 ### What repeats in a text?
 
 ```
-$ substrings --minlength=1 mississippi
+$ substrings --inline --minlength=1 mississippi
 i 4
 s 4
 is 2
@@ -225,7 +257,7 @@ x86 73
 ### Find palindromes
 
 ```
-$ substrings --palindrome --top 1 "racecar level noon"
+$ substrings --inline --palindrome --top 1 "racecar level noon"
 Length 7 at position 0: "racecar"
 Length 7 at position 7: " level "
 Length 4 at position 14: "noon"
@@ -242,7 +274,7 @@ The shortest substrings that occur exactly once, which are the shortest
 "fingerprints" that identify a position in the text:
 
 ```
-$ substrings --shortest-unique --top 1 abracadabra
+$ substrings --inline --shortest-unique --top 1 abracadabra
 Length 1 at position 4: "c"
 Length 1 at position 6: "d"
 ab 2
@@ -256,7 +288,7 @@ byte (`-`). The output is TSV, and escaped so the input can be rebuilt from
 it.
 
 ```
-$ substrings --lz77 "how much wood would a woodchuck chuck"
+$ substrings --inline --lz77 "how much wood would a woodchuck chuck"
 pos	len	src	text
 0	1	-	h
 1	1	-	o
@@ -296,7 +328,7 @@ $ substrings --lz77 -i pg100.txt | tail -1
 ### See the Burrows–Wheeler transform
 
 ```
-$ substrings --bwt banana
+$ substrings --inline --bwt banana
 i  Pos  F         L
 0  6    $  banan  a
 1  5    a  $bana  n
@@ -319,7 +351,7 @@ compresses with BWT-based compressors such as bzip2.
 ### Look inside the suffix array
 
 ```
-$ substrings --view-internal-tables banana
+$ substrings --inline --view-internal-tables banana
 i  SA[i]  Rank[i]  PLCP[i]  LCP[i]  Sorted Suffix
 0  5      3        0        0       a
 1  3      2        3        1       ana
@@ -339,8 +371,8 @@ terminal (`--color=always|never` to override).
 ### Draw the suffix tree
 
 ```bash
-substrings --graph banana                  # writes suffix_tree.dot
-substrings --dotfile=tree.dot mississippi  # or any file name
+substrings --inline --graph banana                  # writes suffix_tree.dot
+substrings --inline --dotfile=tree.dot mississippi  # or any file name
 dot -Tsvg tree.dot -o tree.svg             # render with Graphviz
 ```
 
@@ -391,16 +423,19 @@ repeat within each file are found; for text that occurs once in each, use
 ## Reference
 
 ```
-substrings [OPTIONS] [INPUT]
+substrings [OPTIONS] [FILE]
+substrings --inline [OPTIONS] TEXT
 ```
 
-Input is taken from the `INPUT` argument or `-i FILE` (only one of them),
-else stdin. `-` means stdin for both, and `-o -` means stdout. Text that
-starts with `-` goes after `--`: `substrings -- -x-x-`.
+Input is read from the `FILE` argument or `-i FILE` (only one of them), else
+stdin. `-` means stdin for both, and `-o -` means stdout. With `--inline`, the
+argument is the input text itself. An argument that starts with `-` goes after
+`--`: `substrings -- -notes.txt`, `substrings --inline -- -x-x-`.
 
 | Option | Description |
 |---|---|
 | `-i FILE`, `--input=FILE` | Read input from FILE (`-` for stdin) |
+| `--inline` | Take the argument as the input text instead of a file name |
 | `-o FILE`, `--output=FILE` | Write output to FILE (`-` for stdout) |
 | `-n N`, `--top=N` | Print at most N repeated substrings (default: 100,000) |
 | `--minlength=N` | Minimum length in bytes, or in words with `--words` (default: 2 bytes, 1 word) |
@@ -461,12 +496,12 @@ count.
 `--json` prints one JSON object per line:
 
 ```
-$ substrings --json --palindrome --shortest-unique --top=1 banana
+$ substrings --inline --json --palindrome --shortest-unique --top=1 banana
 {"type":"palindrome","text":"anana","pos":1,"len":5}
 {"type":"palindrome","text":"ana","pos":1,"len":3}
 {"type":"unique","text":"b","pos":0,"len":1}
 {"type":"repeat","text":"an","count":2}
-$ substrings --json --find=an banana
+$ substrings --inline --json --find=an banana
 {"type":"match","text":"an","count":2,"pos":[1,3]}
 ```
 

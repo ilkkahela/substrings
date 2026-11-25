@@ -21,7 +21,7 @@ using namespace std;
 
 namespace {
 
-// The inline argument, else -i FILE, else stdin.
+// The --inline text, else the INPUT or -i file, else stdin.
 expected<string, string> readInput(const Args& args) {
     if (args.inline_input) return *args.inline_input;
 
@@ -38,7 +38,12 @@ expected<string, string> readInput(const Args& args) {
             return unexpected(format("input file {} is {} bytes; the limit is {} bytes (2 GiB)",
                                      *args.input_file, size, kMaxInputBytes));
         ifstream file(*args.input_file, ios::binary);
-        if (!file) return unexpected("cannot open input file: " + *args.input_file);
+        if (!file) {
+            string message = "cannot open input file: " + *args.input_file;
+            if (!filesystem::exists(*args.input_file, ec))
+                message += " (no such file; to analyze the text itself, use --inline)";
+            return unexpected(message);
+        }
         return slurp(file);
     }
     if (isatty(STDIN_FILENO))

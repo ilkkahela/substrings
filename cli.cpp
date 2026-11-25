@@ -89,6 +89,8 @@ const Option kOptions[] = {
     {.name = "--input", .alias = "-i", .arity = Arity::Required,
      .set = [](Args& a, string_view v) { a.input_file = v; return string(); },
      .value_name = "FILE", .help = "Read input from FILE (\"-\" for stdin)"},
+    {.name = "--inline", .set = setFlag<&Args::inline_text>,
+     .help = "Take INPUT as the input text instead of a file name"},
     {.name = "--output", .alias = "-o", .arity = Arity::Required,
      .set = [](Args& a, string_view v) {
          a.output_file = (v == "-") ? "" : v;  // "-" is stdout
@@ -153,8 +155,9 @@ constexpr string_view kUsageHead = R"(Usage: substrings [OPTIONS] [INPUT]
 Suffix array text analysis tool.
 
 Arguments:
-  INPUT                      Inline input text; "-" or omitted reads stdin.
-                             Put text that starts with "-" after "--"
+  INPUT                      File to read; "-" or omitted reads stdin.
+                             With --inline, the input text itself.
+                             Put an INPUT that starts with "-" after "--"
 
 Options:
 )";
@@ -228,7 +231,7 @@ optional<string_view> suggestionFor(string_view name) {
 string unknownOption(string_view name) {
     if (auto suggestion = suggestionFor(name))
         return format("unknown option '{}' (did you mean '{}'?)", name, *suggestion);
-    return format("unknown option '{}' (see --help; put input text that starts "
+    return format("unknown option '{}' (see --help; put an INPUT that starts "
                   "with '-' after '--')", name);
 }
 
@@ -257,12 +260,10 @@ expected<Args, string> parseArgs(int argc, const char* const argv[]) {
     };
     vector<string_view> operands;
     bool options_ended = false;  // after "--"
-    bool dash_operand = false;   // a "-" operand before "--": read stdin
 
     for (int i = 1; i < argc; i++) {
         string_view arg = argv[i];
         if (options_ended || !looksLikeOption(arg)) {
-            dash_operand |= !options_ended && arg == "-";
             operands.push_back(arg);
             continue;
         }
@@ -315,12 +316,17 @@ expected<Args, string> parseArgs(int argc, const char* const argv[]) {
         string list;
         for (string_view operand : operands)
             list += format("{}'{}'", list.empty() ? "" : ", ", operand);
-        fail(format("expected one INPUT, got {}: {} (quote text that contains spaces)",
-                    operands.size(), list));
+        fail(format("expected one INPUT, got {}: {} (to analyze text instead of a file, "
+                    "use --inline \"TEXT\")", operands.size(), list));
     } else if (operands.size() == 1 && args.input_file) {
         fail("give the input either as INPUT or with -i/--input, not both");
-    } else if (operands.size() == 1 && !dash_operand) {
-        args.inline_input = string(operands[0]);
+    } else if (args.inline_text) {
+        if (operands.empty())
+            fail("--inline needs the input text as INPUT: substrings --inline TEXT");
+        else
+            args.inline_input = string(operands[0]);  // even "-": it's text
+    } else if (operands.size() == 1) {
+        args.input_file = string(operands[0]);  // "-" is stdin, as with -i
     }
 
     if (args.json && (args.lz77 || args.bwt || args.view_tables))

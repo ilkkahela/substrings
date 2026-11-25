@@ -190,10 +190,28 @@ TEST(ArgParsing, BwtFlag) {
     EXPECT_TRUE(parse({"--bwt", "banana"}).bwt);
 }
 
-TEST(ArgParsing, BareArgumentIsInlineText) {
-    auto args = parse({"banana"});
+TEST(ArgParsing, BareArgumentIsAFile) {
+    auto args = parse({"banana.txt"});
+    EXPECT_EQ(args.input_file, "banana.txt");
+    EXPECT_FALSE(args.inline_input);
+}
+
+TEST(ArgParsing, InlineMakesInputTheText) {
+    EXPECT_FALSE(parse({}).inline_text);
+    auto args = parse({"--inline", "banana"});
     EXPECT_EQ(args.inline_input, "banana");
     EXPECT_FALSE(args.input_file);
+    EXPECT_EQ(parse({"banana", "--inline"}).inline_input, "banana");  // in any order
+    EXPECT_EQ(parse({"--inline", ""}).inline_input, "");
+    EXPECT_EQ(parse({"--inline", "-"}).inline_input, "-");  // text, not stdin
+    EXPECT_EQ(parse({"--inline", "--", "-x-x-"}).inline_input, "-x-x-");
+}
+
+TEST(ArgParsing, InlineWithoutTextIsAnError) {
+    auto result = runParser({"--inline"});
+    ASSERT_FALSE(result);
+    EXPECT_TRUE(result.error().contains("--inline TEXT")) << result.error();
+    EXPECT_TRUE(parseFails({"--inline", "-i", "in.txt"}));
 }
 
 TEST(ArgParsing, DashIReadsFromFile) {
@@ -247,12 +265,12 @@ TEST(ArgParsing, AllFlagsTogether) {
     EXPECT_FALSE(args.inline_input);
 }
 
-TEST(ArgParsing, InlineTextAfterFlags) {
-    auto args = parse({"--view-internal-tables", "--palindrome", "hello"});
+TEST(ArgParsing, InputAfterFlags) {
+    auto args = parse({"--view-internal-tables", "--palindrome", "hello.txt"});
     EXPECT_TRUE(args.view_tables);
     EXPECT_TRUE(args.palindrome);
-    EXPECT_EQ(args.inline_input, "hello");
-    EXPECT_FALSE(args.input_file);
+    EXPECT_EQ(args.input_file, "hello.txt");
+    EXPECT_FALSE(args.inline_input);
 }
 
 TEST(ArgParsing, FlagOrderDoesNotMatter) {
@@ -294,14 +312,15 @@ TEST(ArgParsing, FlagWithValueIsAnError) {
 }
 
 TEST(ArgParsing, DoubleDashEndsOptions) {
-    EXPECT_EQ(parse({"--", "--lz77"}).inline_input, "--lz77");
-    EXPECT_EQ(parse({"--", "-"}).inline_input, "-");
+    EXPECT_EQ(parse({"--", "--lz77"}).input_file, "--lz77");
+    EXPECT_EQ(parse({"--inline", "--", "--lz77"}).inline_input, "--lz77");
     EXPECT_FALSE(parse({"--", "--lz77"}).lz77);
 }
 
 TEST(ArgParsing, DashReadsStdin) {
     EXPECT_FALSE(parse({"-"}).inline_input);
-    EXPECT_FALSE(parse({"-"}).input_file);
+    EXPECT_EQ(parse({"-"}).input_file, "-");
+    EXPECT_EQ(parse({"--", "-"}).input_file, "-");
     EXPECT_EQ(parse({"-i", "-"}).input_file, "-");
 }
 
@@ -313,11 +332,14 @@ TEST(ArgParsing, MoreThanOneInputIsAnError) {
     auto result = runParser({"hello", "world"});
     ASSERT_FALSE(result);
     EXPECT_TRUE(result.error().contains("'hello', 'world'"));
+    EXPECT_TRUE(result.error().contains("--inline"));  // the likely intent
+    EXPECT_TRUE(parseFails({"--inline", "hello", "world"}));
 }
 
-TEST(ArgParsing, InlineInputAndFileTogetherIsAnError) {
-    EXPECT_TRUE(parseFails({"-i", "in.txt", "banana"}));
+TEST(ArgParsing, InputAndDashITogetherIsAnError) {
+    EXPECT_TRUE(parseFails({"-i", "in.txt", "other.txt"}));
     EXPECT_TRUE(parseFails({"-i", "in.txt", "-"}));
+    EXPECT_TRUE(parseFails({"-i", "in.txt", "--inline", "banana"}));
 }
 
 TEST(ArgParsing, ValuesMayFollowAsTheNextArgument) {
@@ -349,8 +371,8 @@ TEST(ArgParsing, ColorModes) {
     EXPECT_EQ(parse({"--color=never"}).color, When::Never);
     EXPECT_EQ(parse({"--color=never", "--color=auto"}).color, When::Auto);
     EXPECT_TRUE(parseFails({"--color=sometimes"}));
-    // --color takes its value only after "=", so this is inline input.
-    EXPECT_EQ(parse({"--color", "banana"}).inline_input, "banana");
+    // --color takes its value only after "=", so this is INPUT.
+    EXPECT_EQ(parse({"--color", "banana.txt"}).input_file, "banana.txt");
 }
 
 TEST(ArgParsing, NoPager) {

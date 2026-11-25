@@ -24,12 +24,13 @@ struct Args {
     bool force_graph = false;  // allow --graph above kMaxGraphInputBytes
     bool use_pager = true;
     bool json = false;
+    bool inline_text = false;  // --inline: INPUT is the text, not a file name
     When color = When::Auto;
     When escape = When::Auto;
     PopularOptions popular;                 // popular.format is decided in main
     std::vector<std::string> find_patterns; // --find, in order
-    std::optional<std::string> inline_input;
-    std::optional<std::string> input_file;  // "-" for stdin
+    std::optional<std::string> inline_input;  // INPUT, with --inline
+    std::optional<std::string> input_file;    // INPUT or -i; "-" for stdin
     std::string output_file;                // empty for stdout
     std::string dot_file;
     std::string completions_shell;          // --completions: print this shell's script
@@ -61,8 +62,9 @@ struct Option {
 [[nodiscard]] std::span<const Option> options();
 
 // Rejects unknown options (suggesting a close match), missing values and more
-// than one INPUT. Everything after "--" is input text, even if it starts with
-// "-". Errors are deferred so that --help always works.
+// than one INPUT. INPUT is a file name, or the text itself with --inline.
+// Everything after "--" is INPUT, even if it starts with "-". Errors are
+// deferred so that --help always works.
 [[nodiscard]] std::expected<Args, std::string> parseArgs(int argc, const char* const argv[]);
 
 [[nodiscard]] std::string usageText();
